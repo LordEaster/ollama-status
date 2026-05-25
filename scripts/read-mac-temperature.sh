@@ -54,6 +54,10 @@ read_apple_sensors_temperature() {
 }
 
 if [[ -z "$ISMC_BIN" ]]; then
+  ISMC_BIN="$(command -v iSMC || true)"
+fi
+
+if [[ -z "$ISMC_BIN" ]]; then
   for candidate in \
     "${HOME}/go/bin/iSMC" \
     "${HOME}/.local/bin/iSMC" \
