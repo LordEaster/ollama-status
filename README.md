@@ -109,6 +109,27 @@ Example temperature command for testing:
 TEMPERATURE_COMMAND=printf "52.4 C"
 ```
 
+On macOS, `./scripts/install-service.sh` will try to set up this helper automatically when `TEMPERATURE_COMMAND` is empty. If automatic setup fails, install it manually:
+
+```bash
+xcode-select --install
+git clone https://github.com/fermion-star/apple_sensors.git ~/apple_sensors
+cd ~/apple_sensors
+clang -Wall -v temp_sensor.m -framework IOKit -framework Foundation -o temp_sensor
+```
+
+Then set:
+
+```env
+TEMPERATURE_COMMAND=/path/to/ollama-status/scripts/read-mac-temperature.sh
+```
+
+If `temp_sensor` is not in `~/apple_sensors/temp_sensor`, set its path too:
+
+```env
+TEMPERATURE_COMMAND=TEMP_SENSOR_BIN=/path/to/temp_sensor /path/to/ollama-status/scripts/read-mac-temperature.sh
+```
+
 ## API
 
 Dashboard status:
