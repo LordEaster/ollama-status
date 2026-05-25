@@ -120,6 +120,7 @@ setup_macos_temperature_helper() {
   local wrapper="${PROJECT_DIR}/scripts/read-mac-temperature.sh"
   local sensor_dir="${HOME}/apple_sensors"
   local sensor_bin="${sensor_dir}/temp_sensor"
+  local ismc_dir="${HOME}/iSMC"
   local ismc_bin=""
   local go_path=""
 
@@ -142,19 +143,33 @@ setup_macos_temperature_helper() {
 
   if command -v go >/dev/null 2>&1; then
     echo "Installing Apple Silicon temperature helper with iSMC..."
-    if CGO_ENABLED=1 go install github.com/dkorunic/iSMC@latest; then
-      go_path="$(go env GOPATH 2>/dev/null || true)"
-      ismc_bin="${go_path:-${HOME}/go}/bin/iSMC"
+    go_path="$(go env GOPATH 2>/dev/null || true)"
+    ismc_bin="${go_path:-${HOME}/go}/bin/iSMC"
 
-      if [[ -x "$ismc_bin" ]] && ISMC_BIN="$ismc_bin" "$wrapper" >/dev/null 2>&1; then
-        TEMPERATURE_COMMAND="$wrapper"
-        echo "Using macOS temperature helper: $TEMPERATURE_COMMAND"
-        return
+    if [[ ! -d "$ismc_dir/.git" ]]; then
+      rm -rf "$ismc_dir"
+
+      if ! git clone --depth 1 https://github.com/dkorunic/iSMC.git "$ismc_dir"; then
+        echo "Skipping iSMC helper: failed to clone iSMC. Trying apple_sensors..." >&2
       fi
-
-      echo "iSMC installed but did not return a temperature value. Trying apple_sensors..." >&2
     else
-      echo "Skipping iSMC helper: go install failed. Trying apple_sensors..." >&2
+      git -C "$ismc_dir" pull --ff-only >/dev/null 2>&1 || true
+    fi
+
+    if [[ -d "$ismc_dir" ]]; then
+      mkdir -p "$(dirname "$ismc_bin")"
+
+      if (cd "$ismc_dir" && CGO_ENABLED=1 go build -o "$ismc_bin" .); then
+        if [[ -x "$ismc_bin" ]] && ISMC_BIN="$ismc_bin" "$wrapper" >/dev/null 2>&1; then
+          TEMPERATURE_COMMAND="$wrapper"
+          echo "Using macOS temperature helper: $TEMPERATURE_COMMAND"
+          return
+        fi
+
+        echo "iSMC built but did not return a temperature value. Trying apple_sensors..." >&2
+      else
+        echo "Skipping iSMC helper: go build failed. Trying apple_sensors..." >&2
+      fi
     fi
   else
     echo "Skipping iSMC helper: Go was not found. Install Go with: brew install go" >&2
