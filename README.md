@@ -109,7 +109,15 @@ Example temperature command for testing:
 TEMPERATURE_COMMAND=printf "52.4 C"
 ```
 
-On macOS, `./scripts/install-service.sh` will try to set up this helper automatically when `TEMPERATURE_COMMAND` is empty. If automatic setup fails, install it manually:
+On macOS, `./scripts/install-service.sh` will try to set up a temperature helper automatically when `TEMPERATURE_COMMAND` is empty. It first tries `iSMC` when Go is installed, then falls back to `apple_sensors`.
+
+Manual `iSMC` setup:
+
+```bash
+CGO_ENABLED=1 go install github.com/dkorunic/iSMC@latest
+```
+
+Manual `apple_sensors` setup:
 
 ```bash
 xcode-select --install
@@ -124,10 +132,10 @@ Then set:
 TEMPERATURE_COMMAND=/path/to/ollama-status/scripts/read-mac-temperature.sh
 ```
 
-If `temp_sensor` is not in `~/apple_sensors/temp_sensor`, set its path too:
+If helper binaries are not in their default locations, set their paths too:
 
 ```env
-TEMPERATURE_COMMAND=TEMP_SENSOR_BIN=/path/to/temp_sensor /path/to/ollama-status/scripts/read-mac-temperature.sh
+TEMPERATURE_COMMAND=ISMC_BIN=/path/to/iSMC TEMP_SENSOR_BIN=/path/to/temp_sensor /path/to/ollama-status/scripts/read-mac-temperature.sh
 ```
 
 ## API

@@ -120,6 +120,7 @@ setup_macos_temperature_helper() {
   local wrapper="${PROJECT_DIR}/scripts/read-mac-temperature.sh"
   local sensor_dir="${HOME}/apple_sensors"
   local sensor_bin="${sensor_dir}/temp_sensor"
+  local ismc_bin="${HOME}/go/bin/iSMC"
 
   if [[ ! -x "$wrapper" ]]; then
     return
@@ -131,14 +132,29 @@ setup_macos_temperature_helper() {
     return
   fi
 
+  if command -v go >/dev/null 2>&1; then
+    echo "Installing Apple Silicon temperature helper with iSMC..."
+    if CGO_ENABLED=1 go install github.com/dkorunic/iSMC@latest; then
+      if [[ -x "$ismc_bin" ]] && ISMC_BIN="$ismc_bin" "$wrapper" >/dev/null 2>&1; then
+        TEMPERATURE_COMMAND="$wrapper"
+        echo "Using macOS temperature helper: $TEMPERATURE_COMMAND"
+        return
+      fi
+
+      echo "iSMC installed but did not return a temperature value. Trying apple_sensors..." >&2
+    else
+      echo "Skipping iSMC helper: go install failed. Trying apple_sensors..." >&2
+    fi
+  fi
+
   if ! command -v git >/dev/null 2>&1 || ! command -v clang >/dev/null 2>&1; then
-    echo "Skipping macOS temperature helper setup: git and clang are required." >&2
+    echo "Skipping apple_sensors helper setup: git and clang are required." >&2
     echo "Install Xcode Command Line Tools with: xcode-select --install" >&2
     return
   fi
 
   if [[ ! -d "$sensor_dir" ]]; then
-    echo "Installing Apple Silicon temperature helper..."
+    echo "Installing Apple Silicon temperature helper with apple_sensors..."
     if ! git clone --depth 1 https://github.com/fermion-star/apple_sensors.git "$sensor_dir"; then
       echo "Skipping temperature helper: failed to clone apple_sensors." >&2
       return
