@@ -3,16 +3,17 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_NAME="ollama-status"
-PORT="3030"
-OLLAMA_URL="http://localhost:11434"
+ENV_FILE="${PROJECT_DIR}/.env"
+PORT=""
+OLLAMA_URL=""
 SYSTEM_URL=""
-REQUEST_TIMEOUT_MS="3000"
+REQUEST_TIMEOUT_MS=""
 
 load_env_file() {
-  local env_path="${PROJECT_DIR}/.env"
-
-  if [[ ! -f "$env_path" ]]; then
-    return
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Missing config file: $ENV_FILE" >&2
+    echo "Create it first: cp .env.example .env" >&2
+    exit 1
   fi
 
   while IFS='=' read -r key value || [[ -n "$key" ]]; do
@@ -34,46 +35,29 @@ load_env_file() {
         REQUEST_TIMEOUT_MS="$value"
         ;;
     esac
-  done < "$env_path"
+  done < "$ENV_FILE"
 }
-
-load_env_file
 
 usage() {
   cat <<EOF
 Usage: ./scripts/install-service.sh [options]
 
 Options:
-  --port PORT                 Dashboard port. Default: 3030
-  --ollama-url URL            Ollama API URL. Default: http://localhost:11434
-  --system-url URL            Optional remote system metrics service URL
-  --timeout-ms MS             Upstream request timeout. Default: 3000
+  --env-file PATH             Config file. Default: .env
   --name NAME                 Service name. Default: ollama-status
   -h, --help                  Show this help
 
 Examples:
-  ./scripts/install-service.sh --port 3030
-  ./scripts/install-service.sh --port 3030 --ollama-url http://localhost:11434
-  ./scripts/install-service.sh --port 3030 --ollama-url http://ollama-host.local:11434 --system-url http://ollama-host.local:3031
+  cp .env.example .env
+  ./scripts/install-service.sh
+  ./scripts/install-service.sh --env-file /etc/ollama-status.env
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --port)
-      PORT="${2:?Missing value for --port}"
-      shift 2
-      ;;
-    --ollama-url)
-      OLLAMA_URL="${2:?Missing value for --ollama-url}"
-      shift 2
-      ;;
-    --system-url)
-      SYSTEM_URL="${2:?Missing value for --system-url}"
-      shift 2
-      ;;
-    --timeout-ms)
-      REQUEST_TIMEOUT_MS="${2:?Missing value for --timeout-ms}"
+    --env-file)
+      ENV_FILE="${2:?Missing value for --env-file}"
       shift 2
       ;;
     --name)
@@ -91,6 +75,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+load_env_file
+
+PORT="${PORT:-3030}"
+OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
+SYSTEM_URL="${SYSTEM_URL:-}"
+REQUEST_TIMEOUT_MS="${REQUEST_TIMEOUT_MS:-3000}"
 
 NODE_BIN="$(command -v node || true)"
 NPM_BIN="$(command -v npm || true)"

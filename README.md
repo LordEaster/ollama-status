@@ -57,8 +57,16 @@ http://OLLAMA_MACHINE_IP:3030
 
 Use a different port:
 
+Edit `.env`:
+
+```env
+PORT=8090
+```
+
+Then reinstall/restart the service:
+
 ```bash
-./scripts/install-service.sh --port 8090
+./scripts/install-service.sh
 ```
 
 Remove the service:
@@ -85,6 +93,8 @@ cp .env.example .env
 ```
 
 Then edit `.env` for your machine. `.env` is ignored by git.
+
+The install script reads configuration from `.env`. Do not pass runtime config in the install command; keep it in one place.
 
 The normal setup does not need `SYSTEM_URL`. Use it only if the dashboard and Ollama are intentionally split across machines.
 
