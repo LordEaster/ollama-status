@@ -1,9 +1,12 @@
 const path = require("node:path");
 const os = require("node:os");
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
 require("dotenv").config();
 const express = require("express");
 
 const app = express();
+const execFileAsync = promisify(execFile);
 
 const PORT = Number(process.env.PORT || 3030);
 const OLLAMA_URL = (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "");
@@ -58,11 +61,11 @@ app.get("/api/status", async (_req, res) => {
   }
 });
 
-app.get("/api/system", (_req, res) => {
+app.get("/api/system", async (_req, res) => {
   res.json({
     ok: true,
     checkedAt: new Date().toISOString(),
-    system: readLocalSystemStatus("local"),
+    system: await readLocalSystemStatus("local"),
   });
 });
 
@@ -102,7 +105,7 @@ async function readConfiguredSystemStatus() {
   }
 }
 
-function readLocalSystemStatus(source) {
+async function readLocalSystemStatus(source) {
   const cpus = os.cpus();
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
@@ -110,6 +113,10 @@ function readLocalSystemStatus(source) {
   const currentCpuSample = readCpuSample();
   const cpuUsagePercent = calculateCpuUsage(lastCpuSample, currentCpuSample);
   lastCpuSample = currentCpuSample;
+  const [memoryPressure, temperature] = await Promise.all([
+    readMemoryPressure(totalMemory, freeMemory),
+    readTemperature(),
+  ]);
 
   return {
     ok: true,
@@ -129,7 +136,9 @@ function readLocalSystemStatus(source) {
       freeBytes: freeMemory,
       usedBytes: usedMemory,
       usedPercent: totalMemory > 0 ? (usedMemory / totalMemory) * 100 : 0,
+      pressure: memoryPressure,
     },
+    temperature,
   };
 }
 
@@ -153,6 +162,185 @@ function calculateCpuUsage(previous, current) {
   }
 
   return Math.max(0, Math.min(100, (1 - idleDelta / totalDelta) * 100));
+}
+
+async function readMemoryPressure(totalMemory, freeMemory) {
+  if (os.platform() === "darwin") {
+    try {
+      const { stdout } = await execFileAsync("memory_pressure", ["-Q"], { timeout: 1200 });
+      const freeMatch = stdout.match(/System-wide memory free percentage:\s*(\d+(?:\.\d+)?)%/i);
+
+      if (freeMatch) {
+        const pressurePercent = clampPercent(100 - Number(freeMatch[1]));
+
+        return {
+          percent: pressurePercent,
+          label: labelPressure(pressurePercent),
+          source: "memory_pressure",
+        };
+      }
+    } catch (_error) {
+      // Fall back to used memory when macOS memory_pressure is unavailable.
+    }
+  }
+
+  const usedPercent = totalMemory > 0 ? ((totalMemory - freeMemory) / totalMemory) * 100 : 0;
+
+  return {
+    percent: clampPercent(usedPercent),
+    label: labelPressure(usedPercent),
+    source: "memory_used",
+  };
+}
+
+async function readTemperature() {
+  const platform = os.platform();
+
+  if (platform === "darwin") {
+    return await firstAvailableTemperature([
+      () => readTemperatureCommand("osx-cpu-temp", [], /(-?\d+(?:\.\d+)?)\s*°?\s*C/i, "osx-cpu-temp"),
+      () => readTemperatureCommand("istats", ["cpu", "temp", "--value-only"], /(-?\d+(?:\.\d+)?)/, "istats"),
+      () => readTemperatureCommand(
+        "powermetrics",
+        ["--samplers", "thermal", "-n", "1", "-i", "1000"],
+        /(?:CPU|GPU|die|package)[^:\n]*temperature:\s*(-?\d+(?:\.\d+)?)/i,
+        "powermetrics",
+      ),
+    ]);
+  }
+
+  if (platform === "linux") {
+    return await readLinuxTemperature();
+  }
+
+  if (platform === "win32") {
+    return await readWindowsTemperature();
+  }
+
+  return unavailableTemperature();
+}
+
+async function firstAvailableTemperature(readers) {
+  for (const read of readers) {
+    const result = await read();
+
+    if (result.available) {
+      return result;
+    }
+  }
+
+  return unavailableTemperature();
+}
+
+async function readTemperatureCommand(command, args, pattern, source) {
+  try {
+    const { stdout } = await execFileAsync(command, args, { timeout: 1800 });
+    const match = stdout.match(pattern);
+
+    if (!match) {
+      return unavailableTemperature(source);
+    }
+
+    const celsius = Number(match[1]);
+
+    if (!Number.isFinite(celsius)) {
+      return unavailableTemperature(source);
+    }
+
+    return {
+      available: true,
+      celsius,
+      source,
+    };
+  } catch (_error) {
+    return unavailableTemperature(source);
+  }
+}
+
+async function readLinuxTemperature() {
+  try {
+    const { stdout } = await execFileAsync("sh", ["-c", "cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null"], {
+      timeout: 1200,
+    });
+    const values = stdout
+      .split(/\s+/)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .map((value) => (value > 1000 ? value / 1000 : value));
+
+    if (values.length === 0) {
+      return unavailableTemperature("thermal_zone");
+    }
+
+    return {
+      available: true,
+      celsius: Math.max(...values),
+      source: "thermal_zone",
+    };
+  } catch (_error) {
+    return unavailableTemperature("thermal_zone");
+  }
+}
+
+async function readWindowsTemperature() {
+  try {
+    const { stdout } = await execFileAsync(
+      "wmic",
+      ["/namespace:\\\\root\\wmi", "PATH", "MSAcpi_ThermalZoneTemperature", "get", "CurrentTemperature", "/value"],
+      { timeout: 1800 },
+    );
+    const values = [...stdout.matchAll(/CurrentTemperature=(\d+)/gi)]
+      .map((match) => Number(match[1]) / 10 - 273.15)
+      .filter((value) => Number.isFinite(value));
+
+    if (values.length === 0) {
+      return unavailableTemperature("wmic");
+    }
+
+    return {
+      available: true,
+      celsius: Math.max(...values),
+      source: "wmic",
+    };
+  } catch (_error) {
+    return unavailableTemperature("wmic");
+  }
+}
+
+function unavailableTemperature(source = "") {
+  return {
+    available: false,
+    celsius: null,
+    source,
+  };
+}
+
+function labelPressure(percent) {
+  if (!Number.isFinite(percent)) {
+    return "unknown";
+  }
+
+  if (percent >= 85) {
+    return "critical";
+  }
+
+  if (percent >= 70) {
+    return "high";
+  }
+
+  if (percent >= 50) {
+    return "moderate";
+  }
+
+  return "normal";
+}
+
+function clampPercent(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, value));
 }
 
 app.listen(PORT, () => {

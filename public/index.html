@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ollama Status</title>
-    <link rel="stylesheet" href="./styles.css?v=3" />
+    <link rel="stylesheet" href="./styles.css?v=4" />
   </head>
   <body>
     <main class="shell">
@@ -58,9 +58,22 @@
             <strong id="memory-usage">-</strong>
           </div>
           <div class="meter" aria-hidden="true"><span id="memory-meter"></span></div>
+          <div class="meter secondary" aria-hidden="true"><span id="memory-pressure-meter"></span></div>
           <div class="facts compact">
+            <div class="fact"><span>Pressure</span><span id="memory-pressure">-</span></div>
             <div class="fact"><span>Free</span><span id="memory-free">-</span></div>
             <div class="fact"><span>Total</span><span id="memory-total">-</span></div>
+          </div>
+        </article>
+
+        <article class="usage-panel">
+          <div class="usage-panel-head">
+            <p class="label">Temperature</p>
+            <strong id="temperature-value">-</strong>
+          </div>
+          <div class="facts compact">
+            <div class="fact"><span>Status</span><span id="temperature-status">-</span></div>
+            <div class="fact"><span>Source</span><span id="temperature-source">-</span></div>
           </div>
         </article>
 
@@ -80,6 +93,6 @@
       <section id="models" class="models" aria-label="Loaded models"></section>
     </main>
 
-    <script src="./app.js?v=3"></script>
+    <script src="./app.js?v=4"></script>
   </body>
 </html>

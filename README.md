@@ -7,9 +7,11 @@ It shows:
 - Ollama connection status
 - Models currently loaded in Ollama memory
 - Model details from `GET /api/ps`, including VRAM size, context length, and expiry time when available
-- Host CPU usage, load average, RAM usage, uptime, platform, architecture, and hostname
+- Host CPU usage, load average, RAM usage and pressure, temperature when available, uptime, platform, architecture, and hostname
 
 Ollama itself does not expose host CPU/RAM metrics. This app reads those metrics from the machine where this service runs, so install it on the same machine that runs Ollama when you want accurate host usage.
+
+Temperature is best-effort because each OS exposes sensors differently. The dashboard reads Linux thermal zones, Windows ACPI thermal zones, and common macOS tools such as `osx-cpu-temp`, `istats`, or `powermetrics` when they are available with the service user's permissions.
 
 ## Requirements
 

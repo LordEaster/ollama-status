@@ -10,8 +10,13 @@ const cpuCores = document.querySelector("#cpu-cores");
 const cpuLoad = document.querySelector("#cpu-load");
 const memoryUsage = document.querySelector("#memory-usage");
 const memoryMeter = document.querySelector("#memory-meter");
+const memoryPressure = document.querySelector("#memory-pressure");
+const memoryPressureMeter = document.querySelector("#memory-pressure-meter");
 const memoryFree = document.querySelector("#memory-free");
 const memoryTotal = document.querySelector("#memory-total");
+const temperatureValue = document.querySelector("#temperature-value");
+const temperatureStatus = document.querySelector("#temperature-status");
+const temperatureSource = document.querySelector("#temperature-source");
 const hostUptime = document.querySelector("#host-uptime");
 const hostPlatform = document.querySelector("#host-platform");
 const hostArch = document.querySelector("#host-arch");
@@ -80,8 +85,13 @@ function renderSystem(system) {
     cpuLoad.textContent = system.error || "-";
     memoryUsage.textContent = "-";
     memoryMeter.style.width = "0%";
+    memoryPressure.textContent = "-";
+    memoryPressureMeter.style.width = "0%";
     memoryFree.textContent = "-";
     memoryTotal.textContent = "-";
+    temperatureValue.textContent = "-";
+    temperatureStatus.textContent = "-";
+    temperatureSource.textContent = "-";
     hostUptime.textContent = "-";
     hostPlatform.textContent = "-";
     hostArch.textContent = "-";
@@ -90,6 +100,7 @@ function renderSystem(system) {
 
   const cpuPercent = clampPercent(system.cpu?.usagePercent);
   const memoryPercent = clampPercent(system.memory?.usedPercent);
+  const pressurePercent = clampPercent(system.memory?.pressure?.percent);
 
   hostName.textContent = [system.hostname, system.source === "remote" ? "remote" : ""]
     .filter(Boolean)
@@ -103,8 +114,14 @@ function renderSystem(system) {
 
   memoryUsage.textContent = `${memoryPercent.toFixed(0)}%`;
   memoryMeter.style.width = `${memoryPercent}%`;
+  memoryPressure.textContent = formatPressure(system.memory?.pressure, pressurePercent);
+  memoryPressureMeter.style.width = `${pressurePercent}%`;
   memoryFree.textContent = formatBytes(system.memory?.freeBytes);
   memoryTotal.textContent = formatBytes(system.memory?.totalBytes);
+
+  temperatureValue.textContent = formatTemperature(system.temperature);
+  temperatureStatus.textContent = formatTemperatureStatus(system.temperature);
+  temperatureSource.textContent = formatValue(system.temperature?.source);
 
   hostUptime.textContent = formatDuration(system.uptimeSeconds);
   hostPlatform.textContent = formatValue(system.platform);
@@ -161,6 +178,42 @@ function formatBytes(bytes) {
   }
 
   return `${size.toFixed(2)} ${units[unit]}`;
+}
+
+function formatPressure(pressure, percent) {
+  if (!pressure || !Number.isFinite(percent)) {
+    return "-";
+  }
+
+  return `${percent.toFixed(0)}% ${formatValue(pressure.label)}`;
+}
+
+function formatTemperature(temperature) {
+  if (!temperature?.available || !Number.isFinite(temperature.celsius)) {
+    return "-";
+  }
+
+  return `${temperature.celsius.toFixed(1)}°C`;
+}
+
+function formatTemperatureStatus(temperature) {
+  if (!temperature?.available || !Number.isFinite(temperature.celsius)) {
+    return "Unavailable";
+  }
+
+  if (temperature.celsius >= 90) {
+    return "Critical";
+  }
+
+  if (temperature.celsius >= 75) {
+    return "Hot";
+  }
+
+  if (temperature.celsius >= 60) {
+    return "Warm";
+  }
+
+  return "Normal";
 }
 
 function formatDate(value) {
