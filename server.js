@@ -12,6 +12,7 @@ const PORT = Number(process.env.PORT || 3030);
 const OLLAMA_URL = (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "");
 const SYSTEM_URL = process.env.SYSTEM_URL ? process.env.SYSTEM_URL.replace(/\/$/, "") : "";
 const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS || 3000);
+const TEMPERATURE_COMMAND = process.env.TEMPERATURE_COMMAND || "";
 
 let lastCpuSample = readCpuSample();
 
@@ -195,6 +196,19 @@ async function readMemoryPressure(totalMemory, freeMemory) {
 
 async function readTemperature() {
   const platform = os.platform();
+
+  if (TEMPERATURE_COMMAND) {
+    const configuredTemperature = await readTemperatureCommand(
+      "sh",
+      ["-c", TEMPERATURE_COMMAND],
+      /(-?\d+(?:\.\d+)?)/,
+      "custom",
+    );
+
+    if (configuredTemperature.available) {
+      return configuredTemperature;
+    }
+  }
 
   if (platform === "darwin") {
     return await firstAvailableTemperature([

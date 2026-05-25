@@ -8,6 +8,7 @@ PORT=""
 OLLAMA_URL=""
 SYSTEM_URL=""
 REQUEST_TIMEOUT_MS=""
+TEMPERATURE_COMMAND=""
 
 load_env_file() {
   if [[ ! -f "$ENV_FILE" ]]; then
@@ -33,6 +34,9 @@ load_env_file() {
         ;;
       REQUEST_TIMEOUT_MS)
         REQUEST_TIMEOUT_MS="$value"
+        ;;
+      TEMPERATURE_COMMAND)
+        TEMPERATURE_COMMAND="$value"
         ;;
     esac
   done < "$ENV_FILE"
@@ -82,6 +86,7 @@ PORT="${PORT:-3030}"
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 SYSTEM_URL="${SYSTEM_URL:-}"
 REQUEST_TIMEOUT_MS="${REQUEST_TIMEOUT_MS:-3000}"
+TEMPERATURE_COMMAND="${TEMPERATURE_COMMAND:-}"
 
 NODE_BIN="$(command -v node || true)"
 NPM_BIN="$(command -v npm || true)"
@@ -142,6 +147,8 @@ install_launchd() {
     <string>$(xml_escape "$SYSTEM_URL")</string>
     <key>REQUEST_TIMEOUT_MS</key>
     <string>$(xml_escape "$REQUEST_TIMEOUT_MS")</string>
+    <key>TEMPERATURE_COMMAND</key>
+    <string>$(xml_escape "$TEMPERATURE_COMMAND")</string>
   </dict>
 
   <key>RunAtLoad</key>
@@ -191,6 +198,7 @@ Environment="PORT=$(systemd_escape_env "$PORT")"
 Environment="OLLAMA_URL=$(systemd_escape_env "$OLLAMA_URL")"
 Environment="SYSTEM_URL=$(systemd_escape_env "$SYSTEM_URL")"
 Environment="REQUEST_TIMEOUT_MS=$(systemd_escape_env "$REQUEST_TIMEOUT_MS")"
+Environment="TEMPERATURE_COMMAND=$(systemd_escape_env "$TEMPERATURE_COMMAND")"
 ExecStart=${NODE_BIN} ${PROJECT_DIR}/server.js
 Restart=always
 RestartSec=5

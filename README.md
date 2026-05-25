@@ -13,6 +13,8 @@ Ollama itself does not expose host CPU/RAM metrics. This app reads those metrics
 
 Temperature is best-effort because each OS exposes sensors differently. The dashboard reads Linux thermal zones, Windows ACPI thermal zones, and common macOS tools such as `osx-cpu-temp`, `istats`, or `powermetrics` when they are available with the service user's permissions.
 
+On Apple Silicon Macs, macOS often does not expose temperature to normal user processes. If the dashboard shows `Unavailable`, install or create a helper command that prints a Celsius value and set `TEMPERATURE_COMMAND` in `.env`, then rerun `./scripts/install-service.sh`.
+
 ## Requirements
 
 - Node.js 18 or newer
@@ -87,6 +89,7 @@ Environment variables:
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama API base URL |
 | `REQUEST_TIMEOUT_MS` | `3000` | Timeout for upstream API calls |
 | `SYSTEM_URL` | empty | Optional URL for another Ollama Status instance exposing `/api/system` |
+| `TEMPERATURE_COMMAND` | empty | Optional command that prints a Celsius temperature value |
 
 Create local config from the example:
 
@@ -99,6 +102,12 @@ Then edit `.env` for your machine. `.env` is ignored by git.
 The install script reads configuration from `.env`. Do not pass runtime config in the install command; keep it in one place.
 
 The normal setup does not need `SYSTEM_URL`. Use it only if the dashboard and Ollama are intentionally split across machines.
+
+Example temperature command for testing:
+
+```env
+TEMPERATURE_COMMAND=printf "52.4 C"
+```
 
 ## API
 
