@@ -1,0 +1,26 @@
+{
+  "name": "ollama-status",
+  "version": "1.0.0",
+  "description": "Read-only web dashboard for Ollama's loaded models",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "install:service": "bash scripts/install-service.sh",
+    "uninstall:service": "bash scripts/uninstall-service.sh"
+  },
+  "keywords": [
+    "ollama",
+    "status",
+    "dashboard"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

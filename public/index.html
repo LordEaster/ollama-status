@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ollama Status</title>
+    <link rel="stylesheet" href="./styles.css?v=3" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Ollama</p>
+          <h1>Status</h1>
+        </div>
+        <div id="connection-pill" class="pill pending" aria-live="polite">Checking</div>
+      </header>
+
+      <section class="summary" aria-label="Status summary">
+        <div>
+          <p class="label">Loaded models</p>
+          <p id="model-count" class="metric">-</p>
+        </div>
+        <div>
+          <p class="label">Last check</p>
+          <p id="checked-at" class="metric small">-</p>
+        </div>
+        <div>
+          <p class="label">Refresh</p>
+          <p class="metric small">3s</p>
+        </div>
+      </section>
+
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">Computer</p>
+          <h2>Usage</h2>
+        </div>
+        <p id="host-name" class="host-name">-</p>
+      </section>
+
+      <section class="system-grid" aria-label="Computer usage">
+        <article class="usage-panel">
+          <div class="usage-panel-head">
+            <p class="label">CPU</p>
+            <strong id="cpu-usage">-</strong>
+          </div>
+          <div class="meter" aria-hidden="true"><span id="cpu-meter"></span></div>
+          <div class="facts compact">
+            <div class="fact"><span>Cores</span><span id="cpu-cores">-</span></div>
+            <div class="fact"><span>Load avg</span><span id="cpu-load">-</span></div>
+          </div>
+        </article>
+
+        <article class="usage-panel">
+          <div class="usage-panel-head">
+            <p class="label">RAM</p>
+            <strong id="memory-usage">-</strong>
+          </div>
+          <div class="meter" aria-hidden="true"><span id="memory-meter"></span></div>
+          <div class="facts compact">
+            <div class="fact"><span>Free</span><span id="memory-free">-</span></div>
+            <div class="fact"><span>Total</span><span id="memory-total">-</span></div>
+          </div>
+        </article>
+
+        <article class="usage-panel">
+          <div class="usage-panel-head">
+            <p class="label">Host</p>
+            <strong id="host-uptime">-</strong>
+          </div>
+          <div class="facts compact">
+            <div class="fact"><span>Platform</span><span id="host-platform">-</span></div>
+            <div class="fact"><span>Arch</span><span id="host-arch">-</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section id="message" class="message" hidden></section>
+      <section id="models" class="models" aria-label="Loaded models"></section>
+    </main>
+
+    <script src="./app.js?v=3"></script>
+  </body>
+</html>
